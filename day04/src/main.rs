@@ -1,3 +1,5 @@
+use regex::Regex;
+
 #[derive(Clone)]
 struct Passport {
     byr: Option<String>,
@@ -55,13 +57,73 @@ fn parse_passport(input: &str) -> Passport {
 }
 
 fn passport_is_valid(p: &Passport) -> bool {
-    if p.byr.is_none() { return false; }
-    if p.iyr.is_none() { return false; }
-    if p.eyr.is_none() { return false; }
-    if p.hgt.is_none() { return false; }
-    if p.hcl.is_none() { return false; }
-    if p.ecl.is_none() { return false; }
-    if p.pid.is_none() { return false; }
-    // if p.cid.is_none() { return false; }
+    if let Some(byr) = &p.byr {
+        if !check_year_range(byr, 1920, 2002) {
+            return false;
+        }
+    } else { return false; }
+
+    if let Some(iyr) = &p.iyr {
+        if !check_year_range(iyr, 2010, 2020) {
+            return false;
+        }
+    } else { return false; }
+
+    if let Some(eyr) = &p.eyr {
+        if !check_year_range(eyr, 2020, 2030) {
+            return false;
+        }
+    } else { return false; }
+
+    if let Some(hgt) = &p.hgt {
+        let re = Regex::new(r"^([0-9]+)(cm|in)$").unwrap();
+        if let Some(caps) = re.captures(hgt) {
+            let num_str = caps.get(1).unwrap().as_str();
+            let unit = caps.get(2).unwrap();
+
+            let num = match num_str.parse::<usize>() {
+                Ok(n) => n,
+                Err(_) => { return false; }
+            };
+
+            match unit.as_str() {
+                "in" if num < 59 || num > 76 => { return false; },
+                "cm" if num < 150 || num > 193 => { return false; },
+                _ => {},
+            }
+        } else {
+            return false;
+        }
+    } else { return false; }
+
+    if let Some(hcl) = &p.hcl {
+        let re = Regex::new(r"#[0-9A-Fa-f]{6}").unwrap();
+        if !re.is_match(hcl) { return false; }
+    } else { return false; }
+
+    if let Some(ecl) = &p.ecl {
+        match ecl.as_str() {
+            "amb" | "blu" | "brn" | "gry" | "grn" | "hzl" | "oth" => {},
+            _ => { return false; },
+        }
+    } else { return false; }
+
+    if let Some(pid) = &p.pid {
+        let re = Regex::new(r"^[0-9]{9}$").unwrap();
+        if !re.is_match(pid) { return false; }
+    } else { return false; }
+
+    true
+}
+
+fn check_year_range(year_str: &String, min: usize, max: usize) -> bool {
+    match year_str.parse::<usize>() {
+        Ok(year) => {
+            if year < min || year > max {
+                return false;
+            }
+        }
+        Err(_) => { return false; }
+    };
     true
 }
