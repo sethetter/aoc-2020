@@ -2,15 +2,9 @@ fn main() {
     let input = std::fs::read_to_string("input.txt").unwrap();
     let trees: Vec<Vec<bool>> = input.trim().split("\n").map(line_to_trees).collect();
 
-    let slopes = vec![
-        (1, 1),
-        (3, 1),
-        (5, 1),
-        (7, 1),
-        (1, 2),
-    ];
-
     println!("Part 1: {}", count_for_slope(trees.clone(), (3, 1)));
+
+    let slopes = vec![(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)];
 
     let mut total = 1;
     for slope in slopes {
