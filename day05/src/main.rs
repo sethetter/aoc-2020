@@ -2,18 +2,47 @@ use std::{cmp, fs};
 
 fn main() {
     let lines = fs::read_to_string("input.txt").unwrap();
-    let max_seat_id = lines.trim().split("\n")
-        .map(seat_from_line)
-        .map(|seat| (seat.0 * 8) + seat.1)
-        .fold(0, |max, id| cmp::max(max, id));
 
-    println!("Part 1: {}", max_seat_id);
+    let seats = lines.trim().split("\n").map(seat_from_line);
+    let taken_seats: Vec<usize> = seats.clone().map(seat_id).collect();
+
+    println!("Part 1: {}", taken_seats.clone().into_iter().fold(0, |max, id| cmp::max(max, id)));
+    println!("Part 2: {}", find_my_seat(taken_seats.clone()));
+}
+
+fn find_my_seat(taken_ids: Vec<usize>) -> usize {
+    all_seat_ids().into_iter().for_each(|id| println!("{}", id));
+    all_seat_ids().into_iter()
+        .skip_while(|id| !seat_taken(&taken_ids, &id))
+        .skip_while(|id| seat_taken(&taken_ids, &id))
+        .nth(0).unwrap()
+}
+
+fn seat_taken(taken_ids: &Vec<usize>, id: &usize) -> bool {
+    taken_ids.into_iter().any(|tid| tid == id)
+}
+
+fn seat_id((x, y): (usize, usize)) -> usize { (x * 8) + y }
+
+fn all_seat_ids() -> Vec<usize> {
+    let rows: Vec<usize> = (0..128).collect();
+    let cols: Vec<usize> = (0..8).collect();
+    // cols.into_iter().cycle().zip(
+    //     rows.into_iter().cycle()
+    // ).map(seat_id).collect()
+
+    let mut ids: Vec<usize> = vec![];
+    for r in rows {
+        for c in cols.clone() {
+            ids.push(seat_id((r, c)));
+        }
+    }
+    ids
 }
 
 fn seat_from_line(line: &str) -> (usize, usize) {
     let row_dirs: Vec<char> = line.chars().take(7).collect();
     let col_dirs: Vec<char> = line.chars().skip(7).collect();
-
     (locate(row_dirs, (0..128).collect()), locate(col_dirs, (0..8).collect()))
 }
 
