@@ -14,19 +14,19 @@ fn seat_from_line(line: &str) -> (usize, usize) {
     let row_dirs: Vec<char> = line.chars().take(7).collect();
     let col_dirs: Vec<char> = line.chars().skip(7).collect();
 
-    (locate(row_dirs, (0, 127)), locate(col_dirs, (0, 8)))
+    (locate(row_dirs, (0..128).collect()), locate(col_dirs, (0..8).collect()))
 }
 
-fn locate(dirs: Vec<char>, bounds: (usize, usize)) -> usize {
-    let (x, _y) = dirs.iter().fold(bounds, |(x, y), c| {
-        let half = ((y+1) - (x+1)) / 2;
+fn locate(dirs: Vec<char>, seats: Vec<usize>) -> usize {
+    let result = dirs.iter().fold(seats, |s, c| {
+        let half  = s.clone().into_iter().count() / 2;
         match c {
-            'F' | 'L' => (x, y - half),
-            'B' | 'R' => (x + half, y),
+            'F' | 'L' => s.clone().into_iter().take(half).collect(),
+            'B' | 'R' => s.clone().into_iter().skip(half).collect(),
             _ => panic!("Invalid character encountered"),
         }
     });
-    x
+    result[0]
 }
 
 #[test]
