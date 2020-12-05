@@ -24,11 +24,8 @@ fn seat_taken(taken_ids: &Vec<usize>, id: &usize) -> bool {
 fn seat_id((x, y): (usize, usize)) -> usize { (x * 8) + y }
 
 fn all_seat_ids() -> Vec<usize> {
-    let rows: Vec<usize> = (0..128).collect();
-    let cols: Vec<usize> = (0..8).collect();
-
-    rows.into_iter().flat_map(
-        |r| cols.clone().into_iter().map(move |c| seat_id((r, c)))
+    (0..128).flat_map(
+        |r| (0..8).map(move |c| seat_id((r, c)))
     ).collect()
 }
 
