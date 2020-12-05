@@ -11,7 +11,6 @@ fn main() {
 }
 
 fn find_my_seat(taken_ids: Vec<usize>) -> usize {
-    all_seat_ids().into_iter().for_each(|id| println!("{}", id));
     all_seat_ids().into_iter()
         .skip_while(|id| !seat_taken(&taken_ids, &id))
         .skip_while(|id| seat_taken(&taken_ids, &id))
@@ -27,17 +26,10 @@ fn seat_id((x, y): (usize, usize)) -> usize { (x * 8) + y }
 fn all_seat_ids() -> Vec<usize> {
     let rows: Vec<usize> = (0..128).collect();
     let cols: Vec<usize> = (0..8).collect();
-    // cols.into_iter().cycle().zip(
-    //     rows.into_iter().cycle()
-    // ).map(seat_id).collect()
 
-    let mut ids: Vec<usize> = vec![];
-    for r in rows {
-        for c in cols.clone() {
-            ids.push(seat_id((r, c)));
-        }
-    }
-    ids
+    rows.into_iter().flat_map(
+        |r| cols.clone().into_iter().map(move |c| seat_id((r, c)))
+    ).collect()
 }
 
 fn seat_from_line(line: &str) -> (usize, usize) {
