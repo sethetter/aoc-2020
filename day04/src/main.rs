@@ -1,4 +1,5 @@
 use regex::Regex;
+use anyhow::{anyhow, Result};
 
 #[derive(Clone)]
 struct Passport {
@@ -15,14 +16,8 @@ struct Passport {
 impl Default for Passport {
     fn default() -> Self {
         Passport {
-            byr: None,
-            iyr: None,
-            eyr: None,
-            hgt: None,
-            hcl: None,
-            ecl: None,
-            pid: None,
-            cid: None,
+            byr: None, iyr: None, eyr: None, hgt: None,
+            hcl: None, ecl: None, pid: None, cid: None,
         }
     }
 }
@@ -31,9 +26,15 @@ fn main() {
     let input = std::fs::read_to_string("input.txt").unwrap();
 
     let passports: Vec<Passport> = input.trim().split("\n\n").map(parse_passport).collect();
-    let num_valid = passports.into_iter().filter(passport_is_valid).count();
+    let num_valid = passports.into_iter().filter(|p| {
+        // validate_passport(p).is_ok()
+        match validate_passport(p) {
+            Ok(_) => true,
+            Err(e) => { println!("{}", e); false },
+        }
+    }).count();
 
-    println!("Part 1: {}", num_valid);
+    println!("Num Valid: {}", num_valid);
 }
 
 fn parse_passport(input: &str) -> Passport {
@@ -56,74 +57,50 @@ fn parse_passport(input: &str) -> Passport {
     p
 }
 
-fn passport_is_valid(p: &Passport) -> bool {
-    if let Some(byr) = &p.byr {
-        if !check_year_range(byr, 1920, 2002) {
-            return false;
-        }
-    } else { return false; }
-
-    if let Some(iyr) = &p.iyr {
-        if !check_year_range(iyr, 2010, 2020) {
-            return false;
-        }
-    } else { return false; }
-
-    if let Some(eyr) = &p.eyr {
-        if !check_year_range(eyr, 2020, 2030) {
-            return false;
-        }
-    } else { return false; }
-
-    if let Some(hgt) = &p.hgt {
-        let re = Regex::new(r"^([0-9]+)(cm|in)$").unwrap();
-        if let Some(caps) = re.captures(hgt) {
-            let num_str = caps.get(1).unwrap().as_str();
-            let unit = caps.get(2).unwrap();
-
-            let num = match num_str.parse::<usize>() {
-                Ok(n) => n,
-                Err(_) => { return false; }
-            };
-
-            match unit.as_str() {
-                "in" if num < 59 || num > 76 => { return false; },
-                "cm" if num < 150 || num > 193 => { return false; },
-                _ => {},
-            }
-        } else {
-            return false;
-        }
-    } else { return false; }
-
-    if let Some(hcl) = &p.hcl {
-        let re = Regex::new(r"#[0-9A-Fa-f]{6}").unwrap();
-        if !re.is_match(hcl) { return false; }
-    } else { return false; }
-
-    if let Some(ecl) = &p.ecl {
-        match ecl.as_str() {
-            "amb" | "blu" | "brn" | "gry" | "grn" | "hzl" | "oth" => {},
-            _ => { return false; },
-        }
-    } else { return false; }
-
-    if let Some(pid) = &p.pid {
-        let re = Regex::new(r"^[0-9]{9}$").unwrap();
-        if !re.is_match(pid) { return false; }
-    } else { return false; }
-
-    true
+fn validate_passport(p: &Passport) -> Result<()> {
+    check_year_range(p.clone().byr, 1920, 2002)?;
+    check_year_range(p.clone().iyr, 2010, 2020)?;
+    check_year_range(p.clone().eyr, 2020, 2030)?;
+    check_height(p.clone().hgt)?;
+    check_regex(p.clone().hcl, "#[0-9A-Fa-f]{6}")?;
+    check_regex(p.clone().ecl, "^(amb|blu|brn|gry|grn|hzl|oth)$")?;
+    check_regex(p.clone().pid, "^[0-9]{9}$")?;
+    Ok(())
 }
 
-fn check_year_range(year_str: &String, min: usize, max: usize) -> bool {
-    match year_str.parse::<usize>() {
-        Ok(year) => {
-            if year < min || year > max {
-                return false;
-            }
-        }
-        Err(_) => { return false; }
-    };
-    true
+fn check_year_range(year_str: Option<String>, min: usize, max: usize) -> Result<()> {
+    let year = year_str.ok_or(anyhow!("Missing value"))?.parse::<usize>()
+        .map_err(|_e| anyhow!("Failed to parse year_str"))?;
+    if year < min || year > max {
+        return Err(anyhow!("Year out of range"));
+    }
+    Ok(())
+}
+
+fn check_height(height: Option<String>) -> Result<()> {
+    let hgt = height.ok_or(anyhow!("Missing hgt"))?;
+
+    let re = Regex::new(r"^([0-9]+)(cm|in)$").unwrap();
+    let caps = re.captures(hgt.as_str()).ok_or(anyhow!("Invalid height format"))?;
+
+    let num_str = caps.get(1).unwrap().as_str();
+    let unit = caps.get(2).unwrap();
+
+    let num = num_str.parse::<usize>().map_err(|_e| anyhow!("Failed to parse height value"))?;
+
+    match unit.as_str() {
+        "in" if num < 59 || num > 76 => { return Err(anyhow!("Height out of range")); },
+        "cm" if num < 150 || num > 193 => { return Err(anyhow!("Height out of range")); },
+        _ => {},
+    }
+    Ok(())
+}
+
+fn check_regex(field: Option<String>, re_str: &str) -> Result<()> {
+    let re = Regex::new(re_str).unwrap();
+    let val = field.ok_or(anyhow!("Field missing"))?;
+    match re.is_match(val.as_str()) {
+        true => Ok(()),
+        false => Err(anyhow!(format!("Regex mismatch: {}, {}", re_str, val))),
+    }
 }
