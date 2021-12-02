@@ -8,7 +8,8 @@ type Rule = HashMap<String, u32>;
 fn main() {
     let input = std::fs::read_to_string("input.txt").unwrap();
     let rules = parse_rules(input);
-    println!("Part 1: {}", possible_outer_bag_colors(rules, "shiny gold".to_owned()).len());
+    println!("Part 1: {}", possible_outer_bag_colors(rules.clone(), "shiny gold".to_owned()).len());
+    println!("Part 2: {}", total_required_bags(rules.clone(), "shiny gold".to_owned()));
 }
 
 fn parse_rules(input: String) -> Rules {
@@ -106,4 +107,32 @@ fn test_possible_outer_bag_colors() {
     let input = std::fs::read_to_string("sample.txt").unwrap();
     let rules = parse_rules(input);
     assert_eq!(possible_outer_bag_colors(rules, "shiny gold".to_owned()).len(), 4);
+}
+
+fn total_required_bags(rules: Rules, starting_color: String) -> u32 {
+    let mut total = 0;
+    let mut next_layer = vec![starting_color];
+    loop {
+        let layer = next_layer.clone();
+        next_layer = vec![];
+
+        for color in layer.into_iter() {
+            let rule_for_color = rules.get(&color).unwrap();
+            for (c, n) in rule_for_color.into_iter() {
+                total += n;
+                for _ in 0..(n.to_owned()) {
+                    next_layer.push(c.to_owned());
+                }
+            }
+        }
+        if next_layer.len() == 0 { break; }
+    }
+    total
+}
+
+#[test]
+fn test_total_required_bags() {
+    let input = std::fs::read_to_string("sample.txt").unwrap();
+    let rules = parse_rules(input);
+    assert_eq!(total_required_bags(rules, "shiny gold".to_owned()), 32);
 }
